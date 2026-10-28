@@ -1,0 +1,11 @@
+[
+  {
+    "listing": "/index.html",
+    "items": [
+      "/posts/docker/docker.html",
+      "/posts/github/github.html",
+      "/posts/detection/02-tensor.html",
+      "/posts/detection/01-intro.html"
+    ]
+  }
+]

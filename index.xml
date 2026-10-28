@@ -1,0 +1,1648 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss  xmlns:atom="http://www.w3.org/2005/Atom" 
+      xmlns:media="http://search.yahoo.com/mrss/" 
+      xmlns:content="http://purl.org/rss/1.0/modules/content/" 
+      xmlns:dc="http://purl.org/dc/elements/1.1/" 
+      version="2.0">
+<channel>
+<title>journeybegin</title>
+<link>https://journeybegin.github.io/</link>
+<atom:link href="https://journeybegin.github.io/index.xml" rel="self" type="application/rss+xml"/>
+<description>记录自己各种项目，编程，软硬件操作的知识</description>
+<generator>quarto-1.10.19</generator>
+<lastBuildDate>Wed, 01 Apr 2026 16:00:00 GMT</lastBuildDate>
+<item>
+  <title>使用docker利用云平台开始深度学习模型训练</title>
+  <dc:creator>journeyb </dc:creator>
+  <link>https://journeybegin.github.io/posts/docker/docker.html</link>
+  <description><![CDATA[ 
+
+
+
+
+
+<section id="一租用-gpu-创建-windows-实例训练" class="level1">
+<h1>一、租用 GPU 创建 windows 实例训练</h1>
+<p>以晨涧云平台举例说明：</p>
+<section id="安装-openssh-server" class="level2">
+<h2 class="anchored" data-anchor-id="安装-openssh-server">1. 安装 openSSH server</h2>
+<ul>
+<li>根据平台的控制台给出的 RDP 信息中的电脑名称，本地电脑打开运行输入 <code>mstsc</code> 进行远程连接<br></li>
+<li>在远程电脑的<code>设置-&gt;系统-&gt;可选功能-&gt;添加功能</code>，添加 openSSH 服务器，然后以管理员方式打开 powershell，依次运行命令：</li>
+</ul>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode powershell code-with-copy"><code class="sourceCode powershell"><span id="cb1-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 启动 sshd 服务</span></span>
+<span id="cb1-2"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">Start-Service</span> sshd</span>
+<span id="cb1-3"></span>
+<span id="cb1-4"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 设置 sshd 为自动启动</span></span>
+<span id="cb1-5"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">Set-Service</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span>Name sshd <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span>StartupType <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'Automatic'</span></span></code></pre></div></div>
+<ul>
+<li>远程电脑以管理员方式运行记事本(<code>开始菜单-&gt;Windows附件</code>)，在记事本中打开 <code>C:\ProgramData\ssh\sshd_config</code> 这个文件，修改这两项：</li>
+</ul>
+<pre><code># 找到 `#Port 22` 去掉注释号，根据 RDP 信息的预留端口修改数字
+Port 8000
+
+# 去掉注释号
+PasswordAuthentication yes</code></pre>
+<ul>
+<li>远程电脑再次以管理员方式打开 powershell 输入命令：</li>
+</ul>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3" style="background: #f1f3f5;"><pre class="sourceCode powershell code-with-copy"><code class="sourceCode powershell"><span id="cb3-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 重启 sshd 服务</span></span>
+<span id="cb3-2"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">Restart-Service</span> sshd</span>
+<span id="cb3-3"></span>
+<span id="cb3-4"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 防火墙放行 8000 端口</span></span>
+<span id="cb3-5">New-NetFirewallRule <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span>DisplayName <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"SSH on 8000"</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span>Direction Inbound <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span>Protocol TCP <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span>LocalPort <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">8000</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span>Action Allow</span></code></pre></div></div>
+</section>
+<section id="本地电脑安装filezilla-client传输文件" class="level2">
+<h2 class="anchored" data-anchor-id="本地电脑安装filezilla-client传输文件">2. 本地电脑安装Filezilla client传输文件</h2>
+<ul>
+<li>安装 Filezilla 完成后打开 FileZilla，点击左上角“站点管理器”新建一个站点。按 RDP 信息填写：</li>
+</ul>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode md code-with-copy"><code class="sourceCode markdown"><span id="cb4-1">协议：选择 SFTP - SSH File Transfer Protocol</span>
+<span id="cb4-2">主机：电脑名称(服务器ip)</span>
+<span id="cb4-3">端口：预留端口-外网</span>
+<span id="cb4-4">登录类型：正常</span>
+<span id="cb4-5">用户：电脑用户名(admin)</span>
+<span id="cb4-6">密码：电脑密码</span>
+<span id="cb4-7"></span>
+<span id="cb4-8">点击“连接”，出现主机密钥指纹提示时勾选“总是信任”，确定即可。</span></code></pre></div></div>
+</section>
+<section id="使用本地电脑的-vscode-完成远程训练可选" class="level2">
+<h2 class="anchored" data-anchor-id="使用本地电脑的-vscode-完成远程训练可选">3.使用本地电脑的 VSCode 完成远程训练（可选）</h2>
+<p>如果不想一直远程操控屏幕，还可以使用 Remote-SSH 插件，直接在 VSCode 中操作：</p>
+<ul>
+<li>本地电脑 VSCode 安装 Remote-SSH 插件，新建 SSH 连接：</li>
+</ul>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://journeybegin.github.io/posts/docker/images/new_ssh.png" class="img-fluid figure-img"></p>
+<figcaption>连接远程</figcaption>
+</figure>
+</div>
+<ul>
+<li><p>根据上面 RDP 信息，弹出的命令框中输入 <code>ssh -p xxx admin@xxx.xx.xx.xx</code></p></li>
+<li><p>回车后会弹出选择更新配置文件，点击第一个路径，会自动生成一个 config 文件</p></li>
+<li><p>在 config 文件配置完成并保存后，等待远端下载 VSCode server。完成后在 VSCode 的远程资源管理器中已经出现刚配置的远程服务器，此时点击红框按钮连接即可(红色创建新窗口，蓝色当前窗口)</p></li>
+</ul>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://journeybegin.github.io/posts/docker/images/entry_ssh.png" class="img-fluid figure-img"></p>
+<figcaption>进入</figcaption>
+</figure>
+</div>
+<ul>
+<li>VSCode 会自动进行远程端的设置，窗口上方的中间位置会出现选择平台、输入密码设置，按照自己的情况填写即可</li>
+</ul>
+<p><strong>最后使用实例的环境或者与本地电脑一样自己配置环境，就能开始训练</strong></p>
+<hr>
+</section>
+</section>
+<section id="二租用-gpu-创建-linux-实例训练" class="level1">
+<h1>二、租用 GPU 创建 Linux 实例训练</h1>
+<section id="docker-配置深度学习环境" class="level2">
+<h2 class="anchored" data-anchor-id="docker-配置深度学习环境">1. docker 配置深度学习环境</h2>
+<p><strong>通过写 dockerfile 文件创建 docker 镜像，我们可以将配置好的深度学习环境快捷地部署于各台电脑，或上传云 GPU 服务器</strong></p>
+<section id="相关知识" class="level3">
+<h3 class="anchored" data-anchor-id="相关知识">1.1 相关知识</h3>
+<ul>
+<li><p>docker 是一个容器化技术，由虚拟机技术发展而来，给应用程序封装独立的运行环境，“编写一次，到处运行”是核心优势。 Conda 用于管理 python 相关的库，为不同项目创建隔离环境用来隔离不同版本的 python 库，所以如果没有“到处运行”的需求，则可以不使用 docker</p></li>
+<li><p>docker 需要基于已存在的 linux 内核，docker 的镜像（image）可以将应用程序及其所有依赖（包括操作系统、运行时环境、配置文件等）打包到一个独立的、可移植的单元中,保证环境一致不出错。</p></li>
+<li><p>一个 image 可创建有多个容器实例（可以类比于以类创建实例），各个容器互相隔离。 运行容器的计算机称为宿主机，docker 容器之间共用一个系统内核，而每个虚拟机都包含一个操作系统的完整内核，这是与虚拟机的区别之处。</p></li>
+</ul>
+<div id="fig-docker" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-docker-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="https://journeybegin.github.io/posts/docker/images/docker-logo.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-docker-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: docker
+</figcaption>
+</figure>
+</div>
+<hr>
+</section>
+<section id="安装-docker" class="level3">
+<h3 class="anchored" data-anchor-id="安装-docker">1.2 安装 docker</h3>
+<p><strong>(1) 因为 docker 需要基于已存在的 linux 内核，安装 docker 前需要启用 Windows 的 WSL2，下面方式2选1：</strong></p>
+<p>a)控制面板-&gt;程序-&gt;启用或关闭 Windows 功能 或 使用 Windows 的搜索输入“启用或关闭 Windows 功能”， 勾选下图的选项（不用勾选 hyper-V，这是虚拟机技术）</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://journeybegin.github.io/posts/docker/images/enable.png" class="img-fluid figure-img"></p>
+<figcaption>勾选启用</figcaption>
+</figure>
+</div>
+<p>b)管理员运行 powershell 终端，根据<a href="(https://www.cnblogs.com/nickchen121/p/11686958.html)">Windows官方</a>给的命令直接安装 WSL2</p>
+<pre><code>wsl --list --online # 查看 linux 分发版列表
+wsl --install --no-distribution # 不安装 Ubuntu 分发，可以在微软商店直接下载，但速度可能很慢
+wsl --install -d Ubuntu-22.04 # 看显卡选版本</code></pre>
+<p><strong>(2) 安装docker的两种方式：</strong></p>
+<p>a)访问<a href="https://www.docker.com/">docker官网</a>选择下载 “docker desktop for Windows - AMD64” 并运行，可以安装在其他盘。 安装过程注意勾选 <code>WSL2 instead of Hyper-V</code></p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://journeybegin.github.io/posts/docker/images/UseWSL2.png" class="img-fluid figure-img"></p>
+<figcaption>勾选WSL2</figcaption>
+</figure>
+</div>
+<p>安装完成在 docker 的 <code>settings-&gt;Resources-&gt;WSL integration</code> 中勾选上 ubuntu 内核点击 apply</p>
+<p>在 <code>settings-&gt;docker engine</code> 修改设置代码，配置镜像加速以及其他</p>
+<pre><code>{
+  "builder": {
+    "gc": {
+      "defaultKeepStorage": "20GB",
+      "enabled": true
+    }
+  },
+  "default-runtime": "nvidia",
+  "experimental": false,
+  "registry-mirrors": [
+    "https://docker.1ms.run"
+    "https://docker.xuanyuan.me"
+    "https://docker-0,unsee.tech/"
+    "https://hub.geekery.cn",
+    "https://hub-mirror.c.163.com",
+    "https://docker.mirrors.ustc.edu.cn",
+    "https://docker.m.daocloud.io",
+  ],
+
+  "runtimes": {
+    "nvidia": {
+        "path": "nvidia-container-runtime",
+        "runtimeArgs": null
+    }
+  }
+}</code></pre>
+<p>b)如果 docker desktop 出现 bug，也可以通过指令在 ubuntu 上安装 docker</p>
+<p><strong>(3) 进入 Ubuntu 终端，创建用户名与密码</strong></p>
+<hr>
+</section>
+<section id="编写dockerfile" class="level3">
+<h3 class="anchored" data-anchor-id="编写dockerfile">1.3 编写dockerfile</h3>
+<p><strong>(1) 指令详解</strong></p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: center;">指令</th>
+<th style="text-align: center;">说明</th>
+<th style="text-align: center;">示例</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">FROM</td>
+<td style="text-align: center;">指定基础镜像，必须是第一条指令</td>
+<td style="text-align: center;"><code>FROM ubuntu:20.04</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">WORKDIR</td>
+<td style="text-align: center;">设置工作目录，后续指令在此目录执行</td>
+<td style="text-align: center;"><code>WORKDIR /app</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">COPY</td>
+<td style="text-align: center;">复制文件/目录到镜像中</td>
+<td style="text-align: center;"><code>COPY . /app</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">ADD</td>
+<td style="text-align: center;">复制文件到镜像中，支持URL和自动解压</td>
+<td style="text-align: center;"><code>ADD app.tar.gz /app</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">RUN</td>
+<td style="text-align: center;">在构建时执行命令</td>
+<td style="text-align: center;"><code>RUN apt-get update</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">CMD</td>
+<td style="text-align: center;">容器启动时的默认命令</td>
+<td style="text-align: center;"><code>CMD ["python", "app.py"]</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">ENTRYPOINT</td>
+<td style="text-align: center;">容器启动时的入口点，不会被覆盖</td>
+<td style="text-align: center;"><code>ENTRYPOINT ["./start.sh"]</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">ENV</td>
+<td style="text-align: center;">设置环境变量</td>
+<td style="text-align: center;"><code>ENV APP_ENV=production</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">EXPOSE</td>
+<td style="text-align: center;">声明容器监听端口</td>
+<td style="text-align: center;"><code>EXPOSE 8080</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">VOLUME</td>
+<td style="text-align: center;">声明挂载点</td>
+<td style="text-align: center;"><code>VOLUME /data</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">ARG</td>
+<td style="text-align: center;">定义构建参数</td>
+<td style="text-align: center;"><code>ARG VERSION=1.0</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">USER</td>
+<td style="text-align: center;">指定运行用户</td>
+<td style="text-align: center;"><code>USER appuser</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">LABEL</td>
+<td style="text-align: center;">添加镜像信息</td>
+<td style="text-align: center;"><code>LABEL maintainer="you@example.com"</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="dockerfile示例" class="level2">
+<h2 class="anchored" data-anchor-id="dockerfile示例">2. dockerfile示例</h2>
+<p>拉取基础镜像，安装必要工具和 miniconda or minimerge 后，修改 conda 安装源并创建 conda 环境，再修改 pip 源。创建Project 文件夹为了挂载项目文件夹。torch 与项目相关包进入容器再安装</p>
+<p>有博主总结了几套不想动脑的“黄金配置”，可以参考：</p>
+<ul>
+<li><p>前沿性能组 (RTX 50/40系)：<br>
+搭配：Python 3.11 + PyTorch 2.5/2.6 + CUDA 12.4+<br>
+理由：发挥新架构 (FP8 等) 极致性能，必须拥抱 CUDA 12。</p></li>
+<li><p>主流稳定组 (RTX 30/40系)：<br>
+搭配：Python 3.10 + PyTorch 2.3/2.4 + CUDA 12.1<br>
+理由：市面上绝大多数开源项目都能跑，兼容性最佳。</p></li>
+<li><p>经典兼容组 (RTX 20/30系)：<br>
+搭配：Python 3.9/3.10 + PyTorch 2.0 + CUDA 11.8<br>
+理由：CUDA 11.8 是过去几年的统一度量衡，极其稳定。</p></li>
+</ul>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7" style="background: #f1f3f5;"><pre class="sourceCode dockerfile code-with-copy"><code class="sourceCode dockerfile"><span id="cb7-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># NVIDIA CUDA 官方镜像</span></span>
+<span id="cb7-2"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">FROM</span> nvidia/cuda:12.1.0-cudnn8-runtime-ubuntu20.04</span>
+<span id="cb7-3"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">LABEL</span> maintainer=<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"journey&lt;journeybegin@qq.com&gt;"</span></span>
+<span id="cb7-4"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">LABEL</span> description=<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"CUDA12.1_cuDNN8_Miniconda3_Python3.10"</span></span>
+<span id="cb7-5"></span>
+<span id="cb7-6"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 创建环境变量，防止安装过程中出现交互式提示</span></span>
+<span id="cb7-7"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">ENV</span> DEBIAN_FRONTEND=noninteractive <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb7-8">    TZ=Asia/Shanghai <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb7-9">    CONDA_DIR=/opt/Miniconda3</span>
+<span id="cb7-10"></span>
+<span id="cb7-11"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">WORKDIR</span> /root</span>
+<span id="cb7-12"></span>
+<span id="cb7-13"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 安装相关工具</span></span>
+<span id="cb7-14"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">RUN</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">sed</span> <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">-i</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'s/archive.ubuntu.com/mirrors.aliyun.com/g'</span> /etc/apt/sources.list <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb7-15">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">&amp;&amp;</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">sed</span> <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">-i</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'s/security.ubuntu.com/mirrors.aliyun.com/g'</span> /etc/apt/sources.list <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb7-16">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">&amp;&amp;</span> <span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">apt-get</span> update <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb7-17">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">&amp;&amp;</span> <span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">apt-get</span> install <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">-y</span> <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--no-install-recommends</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb7-18">        wget <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb7-19">        ca-certificates <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb7-20">        bzip2 <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb7-21">        libglib2.0-0 <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb7-22">        libgl1 <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb7-23">        tzdata <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb7-24">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">&amp;&amp;</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">ln</span> <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">-fs</span> /usr/share/zoneinfo/<span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">${TZ}</span> /etc/localtime <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb7-25">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">&amp;&amp;</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">echo</span> <span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">${TZ}</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span> /etc/timezone <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb7-26">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">&amp;&amp;</span> <span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">dpkg-reconfigure</span> <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--frontend</span> noninteractive tzdata <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb7-27">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">&amp;&amp;</span> <span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">apt-get</span> clean <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb7-28">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">&amp;&amp;</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">rm</span> <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">-rf</span> /var/lib/apt/lists/<span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">*</span> /tmp/<span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">*</span> /var/tmp/<span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">*</span></span>
+<span id="cb7-29"></span>
+<span id="cb7-30"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 安装miniconda</span></span>
+<span id="cb7-31"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">RUN</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">wget</span> <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">-O</span> /tmp/miniconda.sh <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"https://mirrors.bfsu.edu.cn/anaconda/miniconda/Miniconda3-py310_25.9.1-1-Linux-x86_64.sh"</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb7-32">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">&amp;&amp;</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">bash</span> /tmp/miniconda.sh <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">-b</span> <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">-p</span> <span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">${CONDA_DIR}</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb7-33">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">&amp;&amp;</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">rm</span> /tmp/miniconda.sh <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb7-34">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">&amp;&amp;</span> <span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">${CONDA_DIR}</span><span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">/bin/conda</span> clean <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">-afy</span></span>
+<span id="cb7-35"></span>
+<span id="cb7-36"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">ENV</span> PATH=${CONDA_DIR}/bin:${PATH}</span>
+<span id="cb7-37"></span>
+<span id="cb7-38"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 配置 conda 清华源</span></span>
+<span id="cb7-39"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">RUN</span> <span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">conda</span> config <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--system</span> <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--set</span> show_channel_urls yes <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb7-40">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">&amp;&amp;</span> <span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">conda</span> config <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--system</span> <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--remove</span> channels defaults <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">||</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">true</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb7-41">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">&amp;&amp;</span> <span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">conda</span> config <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--system</span> <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--add</span> channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb7-42">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">&amp;&amp;</span> <span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">conda</span> config <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--system</span> <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--add</span> channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/r <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb7-43">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">&amp;&amp;</span> <span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">conda</span> config <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--system</span> <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--add</span> channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/pytorch</span>
+<span id="cb7-44"></span>
+<span id="cb7-45"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 直接使用base环境并配置 pip 清华源</span></span>
+<span id="cb7-46"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">RUN</span> <span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">pip</span> config set global.index-url <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"https://pypi.tuna.tsinghua.edu.cn/simple"</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb7-47">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">&amp;&amp;</span> <span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">conda</span> clean <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">-afy</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb7-48">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">&amp;&amp;</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">rm</span> <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">-rf</span> /root/.cache/pip <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb7-49">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">&amp;&amp;</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">printf</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'\n# Activate conda base environment\nsource "${CONDA_DIR}/etc/profile.d/conda.sh"\nconda activate base\n'</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;&gt;</span> /root/.bashrc</span>
+<span id="cb7-50"></span>
+<span id="cb7-51"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">WORKDIR</span> /Project</span>
+<span id="cb7-52"></span>
+<span id="cb7-53"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">CMD</span> [<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"/bin/bash"</span>]</span></code></pre></div></div>
+<p><strong>note：</strong></p>
+<ul>
+<li><p><code>FROM nvidia/cuda:12.1.0-runtime-ubuntu20.04</code><br>
+<strong>因为想符合windows习惯并保持精简，从dockerhub拉取nvidia/cuda基础镜像，注意cuda版本。pytorch镜像包含了conda不是miniconda，所以弃用。</strong></p></li>
+<li><p><code>RUN sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list</code><br>
+<strong>更换apt-get安装源，提升下载速度</strong></p></li>
+<li><p><code>RUN apt-get install -y --no-install-recommends wegt(bzip2等)</code><br>
+<strong>安装必要工具。wget为了安装miniconda，ca-certificates提供 HTTPS 证书验证能力，bzip2提供 .bz2 压缩文件解压能力，miniconda需要。一般目标检测模型的cv2需要libglib2.0-0与libgl1，目标跟踪模型可能是其他工具</strong></p></li>
+<li><p><code>RUN ln -fs /usr/share/zoneinfo/${TZ} /etc/localtime</code> <strong>此命令以及下面的两行是设置时区</strong></p></li>
+<li><p><code>RUN apt-get clean &amp;&amp; rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/</code> <strong>清理下载缓存，保持镜像干净，<code>rm -rf</code>命令比较危险</strong></p></li>
+</ul>
+<hr>
+</section>
+<section id="创建-docker-镜像与容器" class="level2">
+<h2 class="anchored" data-anchor-id="创建-docker-镜像与容器">3. 创建 docker 镜像与容器</h2>
+<section id="创建镜像" class="level3">
+<h3 class="anchored" data-anchor-id="创建镜像">3.1 创建镜像</h3>
+<ul>
+<li><p>启动 docker desktop，命令行 cmd 进入 Dockerfile 目录，输入<code>docker build -t cu121-py310-ubuntu20.04 -f Dockerfile</code></p></li>
+<li><p>不满意标签想改名，输入<code>docker tag cu121-py310-ubuntu20.04 journeybegin/fordetection:cu121-py310-ubuntu20.04</code>，然后删除旧标签名<code>docker rmi cu121-py310-ubuntu22.04</code></p></li>
+<li><p>推送镜像至dockerhub，现在 dockerhub 上创建镜像仓库 fordetection，<code>docker push journeybegin/fordetection:cu121-py310-ubuntu22.04</code>，也可以直接在 docker desktop 上操作</p></li>
+<li><p>清理构建镜像的缓存<code>docker builder prune -a -f</code></p></li>
+</ul>
+</section>
+<section id="创建容器" class="level3">
+<h3 class="anchored" data-anchor-id="创建容器">3.2 创建容器</h3>
+<ul>
+<li><p>cmd 输入 <code>docker run -it --gpus all --shm-size=16g -v E:\DeepLearning\DEIM-main:/Project --name DEIM journeybegin/fordetection:cu121-py310-ubuntu22.04</code> 创建容器，将项目文件夹挂载到了/Project 中</p></li>
+<li><p>或者 VSCode 安装 dev container 插件，在项目文件新建文件夹和文件：<code>.devcontainer/devcontainer.json</code></p></li>
+</ul>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8" style="background: #f1f3f5;"><pre class="sourceCode json code-with-copy"><code class="sourceCode json"><span id="cb8-1"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb8-2">  <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">"name"</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">:</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"fordetection-cu121-py310"</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb8-3">  <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">"image"</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">:</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"journeybegin/fordetection:cu121-py310-ubuntu22.04"</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb8-4">  <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">"workspaceFolder"</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">:</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"/Project"</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb8-5">  <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">"mounts"</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">:</span> <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">[</span></span>
+<span id="cb8-6">    <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"source=${localWorkspaceFolder},target=/Project,type=bind"</span></span>
+<span id="cb8-7">  <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">]</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb8-8"></span>
+<span id="cb8-9">  <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">"runArgs"</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">:</span> <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">[</span></span>
+<span id="cb8-10">    <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"--name"</span><span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">,</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"torch2.4.1-cu121-py310-ubuntu22.04"</span><span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb8-11">    <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"--gpus"</span><span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">,</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"all"</span><span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb8-12">    <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"--shm-size=16g"</span></span>
+<span id="cb8-13">  <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">]</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb8-14"></span>
+<span id="cb8-15">  <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">"remoteUser"</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">:</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"root"</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb8-16"></span>
+<span id="cb8-17">  <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">"customizations"</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">:</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb8-18">    <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">"vscode"</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">:</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb8-19">      <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">"extensions"</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">:</span> <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">[</span></span>
+<span id="cb8-20">        <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"ms-python.python"</span><span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb8-21">        <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"ms-python.vscode-pylance"</span><span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb8-22">        <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"ms-toolsai.jupyter"</span></span>
+<span id="cb8-23">      <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">]</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb8-24">      <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">"settings"</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">:</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb8-25">        <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">"python.defaultInterpreterPath"</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">:</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"/opt/Miniconda3/envs/original/bin/python"</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb8-26">        <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">"python.terminal.activateEnvironment"</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">:</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">true</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb8-27">        <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">"terminal.integrated.defaultProfile.linux"</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">:</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"bash"</span></span>
+<span id="cb8-28">      <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">}</span></span>
+<span id="cb8-29">    <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">}</span></span>
+<span id="cb8-30">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">}</span></span>
+<span id="cb8-31"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">}</span></span></code></pre></div></div>
+<p>点击：<code>帮助-&gt;显示所有命令-&gt;Dev Containers: Reopen in Container</code>，这样可以使用 vscode 在容器中开发</p>
+<ul>
+<li>将数据集放进项目文件夹中，最后使用 pip 依次 torch，项目的 requirements.txt 的包，即可训练。可以提前下载 torch 的whl 文件放在项目文件夹中，安装更快</li>
+</ul>
+
+
+</section>
+</section>
+</section>
+
+ ]]></description>
+  <category>使用教程</category>
+  <guid>https://journeybegin.github.io/posts/docker/docker.html</guid>
+  <pubDate>Wed, 01 Apr 2026 16:00:00 GMT</pubDate>
+  <media:content url="https://journeybegin.github.io/posts/docker/images/docker-logo.png" medium="image" type="image/png" height="31" width="144"/>
+</item>
+<item>
+  <title>git使用教程</title>
+  <dc:creator>journeyb </dc:creator>
+  <link>https://journeybegin.github.io/posts/github/github.html</link>
+  <description><![CDATA[ 
+
+
+
+
+
+<section id="git-知识" class="level1">
+<h1>git 知识</h1>
+<ul>
+<li>git 是一个开源的分布式托管，它允许开发者跟踪和管理源代码历史，支持多人协作开发。git 的核心功能包括版本控制、分支管理、合并和冲突解决等。它是基于命令行的工具，可以在本地计算机上完全离线工作。<br></li>
+<li>github 是一个基于 git 的在线托管平台，提供 git 仓库的托管服务。</li>
+</ul>
+<div id="fig-github" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-github-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="https://journeybegin.github.io/posts/github/images/github.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-github-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: github
+</figcaption>
+</figure>
+</div>
+<section id="准备工作" class="level2">
+<h2 class="anchored" data-anchor-id="准备工作">准备工作</h2>
+<ul>
+<li>注册 github 账户<br></li>
+<li>下载 git，安装后使用 git bash 输入<code>ssh-keygen -t rsa -C "自己账号邮箱"</code>获取 ssh key 。其保存在：<code>C:/Users/xxx/.ssh</code> <strong>（若启用了 WSL2，WSL2 系统会自带 git）</strong><br></li>
+<li><strong>id_rsa.pub</strong> 存储公钥，<strong>id_rsa</strong> 存储私钥。复制 id_rsa.pub 的内容，在 github 网站自己账户设置中的 <strong>SSH and GPG keys</strong> 点击 <strong>New SSH key</strong> 粘贴内容，并填写名字</li>
+</ul>
+<div id="fig-ssh" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-ssh-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="https://journeybegin.github.io/posts/github/images/git_ssh.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-ssh-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2: ssh
+</figcaption>
+</figure>
+</div>
+<ul>
+<li>回到 git bash，输入 <code>ssh -T git@github.com</code>，再输入 yes 测试连接，输入 <code>git config --global user.name 'xxx'</code> 与 <code>git config --global user.email '邮箱'</code> 设置本机的 git 身份标识，这些信息会被永久记录在每一次commit提交上传项目历史中<br></li>
+<li>不同电脑要最好重新申请 ssh key</li>
+</ul>
+</section>
+<section id="使用指令" class="level2">
+<h2 class="anchored" data-anchor-id="使用指令">使用指令</h2>
+<ol type="1">
+<li>登录 github，点击头像的 <strong>Repositories-&gt;New</strong> 创建新项目仓库<br></li>
+<li>打开本地文件夹如 <code>d:/xxx</code>，右键选择 <code>git bash here</code>，这里将是仓库项目文件夹的父级目录</li>
+</ol>
+<div id="fig-gitbash" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-gitbash-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="https://journeybegin.github.io/posts/github/images/gitbashhere.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-gitbash-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;3: opengitbash
+</figcaption>
+</figure>
+</div>
+<ol start="3" type="1">
+<li>在项目仓库复制 ssh 地址或 https 地址，在终端输入 <code>git clone "代码仓库地址" "d:/xxx"</code>，一个文件夹将被下载在 <code>d:/xxx</code> <strong>（使用 WSL2 的 git 要注意地址应该为 <code>/mnt/d/xxx</code>）</strong><br></li>
+<li>添加，提交，上传指令</li>
+</ol>
+<p>本地添加了新代码文件：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">git</span> add xx.text</span>
+<span id="cb1-2"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">git</span> commit <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">-m</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'提交信息'</span></span>
+<span id="cb1-3"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">git</span> push origin main</span></code></pre></div></div>
+<ol start="5" type="1">
+<li>常用指令集</li>
+</ol>
+<div id="fig-command" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-command-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="https://journeybegin.github.io/posts/github/images/instantset.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-command-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;4: 指令集
+</figcaption>
+</figure>
+</div>
+
+
+</section>
+</section>
+
+ ]]></description>
+  <category>使用教程</category>
+  <guid>https://journeybegin.github.io/posts/github/github.html</guid>
+  <pubDate>Sun, 26 Oct 2025 16:00:00 GMT</pubDate>
+  <media:content url="https://journeybegin.github.io/posts/github/images/github.png" medium="image" type="image/png" height="144" width="144"/>
+</item>
+<item>
+  <title>pytorch入门</title>
+  <dc:creator>journeyb </dc:creator>
+  <link>https://journeybegin.github.io/posts/detection/02-tensor.html</link>
+  <description><![CDATA[ 
+
+
+
+
+
+<!-- 
+创建环境miniconda or miniconda(使用miniconda推荐再安装一下mamba创建环境会更快)
+mamba创建环境后安装了uv,先设立uv缓存路径`setx UV_CACHE_DIR "D:\uvcache"`重新打开prompt
+尝试使用`uv pip install --python "%CONDA_PREFIX%\python.exe" --index-url xxx torch.wheel`命令安装包
+当然完全可以就使用pip
+-->
+<section id="准备工作" class="level1">
+<h1>准备工作</h1>
+<ul>
+<li>安装miniconda（conda官方）或miniforge（开源社区版，推荐）<br></li>
+<li>base环境最好不要更改。根据工程项目，例如最新的YOLO，创建新的python环境（miniconda在base环境中安装mamba，miniforge自带mamba，使用mamba安装更快，mamba安装必要的包，其余使用pip安装）<br> <code>mamba create -n xx python=3.xx</code><br></li>
+<li>安装torch等python库（从清华镜像源或中科大镜像源下载好适应的whl文件，torch安装会更快）<br> <code>pip install e:/download/torch-xxx.whl</code><br> <code>pip install jupyterlab tensorboard</code></li>
+</ul>
+<p><strong>tensor</strong>可以叫做张量，线性代数通常叫做向量和矩阵，而向量就是一维张量、矩阵是二维张量，只不过张量还可以是三维的、四维的，只是维数高了之后，我们难以理解，因此统一把它都叫做张量。在torch中，张量是一个数据类型，也就是tensor。</p>
+</section>
+<section id="张量" class="level1">
+<h1>张量</h1>
+<p>具有一个轴的张量即向量（vector），具有两个轴的张量即矩阵（matrix），GPU很好地支持加速张量计算，且张量类支持自动微分。<br> 下面是如何使用torch的函数创建张量和操作张量的代码（其实跟MATLAB很像）。</p>
+<section id="张量的创建" class="level2">
+<h2 class="anchored" data-anchor-id="张量的创建">张量的创建</h2>
+<div id="4106bce4" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> torch</span>
+<span id="cb1-2"></span>
+<span id="cb1-3">vector <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> torch.arange(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">12</span>) <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 类似range()对象，arange([start,] stop [,step])</span></span>
+<span id="cb1-4">zero_matrix <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> torch.zeros(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span>) <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 2是最高维度,但序号为0,创建全0矩阵</span></span>
+<span id="cb1-5">one_matrix <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> torch.ones(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span>) <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 创建全1矩阵</span></span>
+<span id="cb1-6">randn_matrix <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> torch.randn(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span>) <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 创建一个元素符合均值0，方差1的标准正态分布的二维张量</span></span>
+<span id="cb1-7">custom_matrix <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> torch.tensor([[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>], [<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">8</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">7</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">6</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">5</span>]]) <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 手动创建张量</span></span>
+<span id="cb1-8"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(vector)</span>
+<span id="cb1-9"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(one_matrix)</span></code></pre></div></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>tensor([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11])
+tensor([[[1., 1., 1., 1.],
+         [1., 1., 1., 1.],
+         [1., 1., 1., 1.]],
+
+        [[1., 1., 1., 1.],
+         [1., 1., 1., 1.],
+         [1., 1., 1., 1.]]])</code></pre>
+</div>
+</div>
+<p>除上述外还有常用创建函数：<br></p>
+<ul>
+<li><code>normal()</code>:生成正态分布，均值与标准差参数要么是浮点数要么是张量，还可以指定形状如<code>torch.normal(0.0,1.0,(3,4))</code><br></li>
+<li><code>linspace()</code>：只知道start与end时用linspace构造等差数列，与arange的区别：包含end，最后参数是生成多少个等距的数</li>
+</ul>
+</section>
+<section id="张量的基础操作形状拼接与类型转换" class="level2">
+<h2 class="anchored" data-anchor-id="张量的基础操作形状拼接与类型转换">张量的基础操作：形状、拼接与类型转换</h2>
+<ol type="1">
+<li>改变形状</li>
+</ol>
+<div id="8a5f81f0" class="cell" data-execution_count="2">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1">matrix <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> torch.arange(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">24</span>).reshape(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span>) <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 重组成3行4列的二维张量</span></span>
+<span id="cb3-2"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(torch.numel(matrix)) <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 统计元素个数</span></span>
+<span id="cb3-3"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(matrix.shape) <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 返回张量各个轴的维度</span></span>
+<span id="cb3-4"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(matrix.reshape(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span>, <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>)) <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 可以用-1自动计算另一维度</span></span>
+<span id="cb3-5"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(matrix.stride()) <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 返回的元组参数从左到右:高维到低维,元素内存地址相隔的步长</span></span>
+<span id="cb3-6"></span>
+<span id="cb3-7">matrix2 <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> vector.view(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>, <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>) <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># view()也用于改变形状</span></span>
+<span id="cb3-8">matrix2 <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> matrix2.unsqueeze(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>) <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 在第2维增加“1”，形状变为2*1*6</span></span>
+<span id="cb3-9"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(matrix2.transpose(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>)) <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 根据序号互换维度,形状变为1*2*6</span></span>
+<span id="cb3-10"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(matrix2.permute(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>)) <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 交换维度,形状变为6*1*2</span></span></code></pre></div></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>24
+torch.Size([2, 3, 4])
+tensor([[[ 0,  1,  2],
+         [ 3,  4,  5],
+         [ 6,  7,  8],
+         [ 9, 10, 11]],
+
+        [[12, 13, 14],
+         [15, 16, 17],
+         [18, 19, 20],
+         [21, 22, 23]]])
+(12, 4, 1)
+tensor([[[ 0,  1,  2,  3,  4,  5],
+         [ 6,  7,  8,  9, 10, 11]]])
+tensor([[[ 0,  6],
+         [ 1,  7],
+         [ 2,  8],
+         [ 3,  9],
+         [ 4, 10],
+         [ 5, 11]]])</code></pre>
+</div>
+</div>
+<p>修改张量形状的函数之间的差别：<br></p>
+<ul>
+<li><code>reshape(a,b)</code>先检验张量元素储存是否连续，不连续（比如将原张量转置后）则不共享返回一个新张量，可以认为将张量展平为序列重新划分，元素顺序不会发生变化<br></li>
+<li><code>view(a,b)</code>的特点是与原张量共享一个内存,原张量不连续会报错<br></li>
+<li><code>resize_(a,b)</code>直接修改原张量，总数量不足自动补足<br></li>
+<li><code>squeeze(n)</code>与<code>unsqueeze(n)</code>在第n维压缩和增加维度，squeeze()的操作与MATLAB的同名函数一样<br></li>
+<li><code>transpose()</code>互换两个维度，<code>permute()</code>交换维度更多样。<code>permute()</code>/<code>transpose()</code>与<code>reshape()</code>/<code>view()</code>不同，交换维度改变了元素读取顺序（存储顺序不变），换一套轴的读法：输出每一维来自输入的哪一维。例如<code>matrix2.permute(2, 0, 1)</code>是将原来的第1维的元素作为第0的元素了</li>
+</ul>
+<ol start="2" type="1">
+<li>连接两个张量：</li>
+</ol>
+<div id="51044a48" class="cell" data-execution_count="3">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1">row_combine <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> torch.cat((custom_matrix, randn_matrix), dim<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>) <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 按第0维组合</span></span>
+<span id="cb5-2">column_combine <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> torch.cat((custom_matrix,randn_matrix), dim<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>) <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 按第1维组合</span></span>
+<span id="cb5-3"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(row_combine, column_combine, sep<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'</span><span class="ch" style="color: #20794D;
+background-color: null;
+font-style: inherit;">\n</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'</span>)</span>
+<span id="cb5-4"></span>
+<span id="cb5-5">row_combine <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> torch.stack([custom_matrix, randn_matrix], dim<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>)</span>
+<span id="cb5-6">column_combine <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> torch.stack([custom_matrix, randn_matrix], dim<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>)</span>
+<span id="cb5-7"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(row_combine, column_combine, sep<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'</span><span class="ch" style="color: #20794D;
+background-color: null;
+font-style: inherit;">\n</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'</span>)</span></code></pre></div></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>tensor([[ 4.0000,  3.0000,  2.0000,  1.0000],
+        [ 8.0000,  7.0000,  6.0000,  5.0000],
+        [ 1.3184,  0.4332,  0.3488, -0.2488],
+        [-0.9996, -0.5029,  0.2083, -0.7595]])
+tensor([[ 4.0000,  3.0000,  2.0000,  1.0000,  1.3184,  0.4332,  0.3488, -0.2488],
+        [ 8.0000,  7.0000,  6.0000,  5.0000, -0.9996, -0.5029,  0.2083, -0.7595]])
+tensor([[[ 4.0000,  3.0000,  2.0000,  1.0000],
+         [ 8.0000,  7.0000,  6.0000,  5.0000]],
+
+        [[ 1.3184,  0.4332,  0.3488, -0.2488],
+         [-0.9996, -0.5029,  0.2083, -0.7595]]])
+tensor([[[ 4.0000,  1.3184],
+         [ 3.0000,  0.4332],
+         [ 2.0000,  0.3488],
+         [ 1.0000, -0.2488]],
+
+        [[ 8.0000, -0.9996],
+         [ 7.0000, -0.5029],
+         [ 6.0000,  0.2083],
+         [ 5.0000, -0.7595]]])</code></pre>
+</div>
+</div>
+<p><code>torch.cat((tensor_a, tensor_b), dim=n)</code>可以认为是将第n维为轴，叠放两个张量，所以第n维会展宽<br> <code>torch.stack([tensor_a, tensor_b], dim=n)</code>可以看做是<code>torch.cat([tensor.unsqueeze(n) for tensor in list], dim=n)</code>先在第n维插入一个大小为1的维度，再沿这个维度用cat合并。还可以用切片理解<code>stack()</code>，上面的代码中<code>row_combine[0,:,:]</code> 等于 <code>custom_matrix</code>，<code>column_combine[:,:,1]</code> 等于 <code>randn_matrix</code></p>
+<ol start="3" type="1">
+<li>索引，切片与转置：</li>
+</ol>
+<div id="901943b7" class="cell" data-execution_count="4">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1">vector[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">11</span>] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span></span>
+<span id="cb7-2">row_combine[:, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, :] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> torch.ones(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span>)</span>
+<span id="cb7-3"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(vector)</span>
+<span id="cb7-4"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(row_combine)</span>
+<span id="cb7-5"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(row_combine.mT) <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># `.T`只能用于二维张量了,`.mT`仅交换多维张量的最后两维</span></span></code></pre></div></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>tensor([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10,  0])
+tensor([[[ 4.0000,  3.0000,  2.0000,  1.0000],
+         [ 1.0000,  1.0000,  1.0000,  1.0000]],
+
+        [[ 1.3184,  0.4332,  0.3488, -0.2488],
+         [ 1.0000,  1.0000,  1.0000,  1.0000]]])
+tensor([[[ 4.0000,  1.0000],
+         [ 3.0000,  1.0000],
+         [ 2.0000,  1.0000],
+         [ 1.0000,  1.0000]],
+
+        [[ 1.3184,  1.0000],
+         [ 0.4332,  1.0000],
+         [ 0.3488,  1.0000],
+         [-0.2488,  1.0000]]])</code></pre>
+</div>
+</div>
+<p><code>row_combine[:, 1, :]</code>与python列表一样，索引从0开始，最后的索引可以是-1，方括号中1:-1位置对应第0维，表示从第二开始到最后一个之前不包含最后一个</p>
+<ol start="4" type="1">
+<li>张量数据类型转换</li>
+</ol>
+<div id="53a1d134" class="cell" data-execution_count="5">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(matrix.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">type</span>())</span>
+<span id="cb9-2">matrix2 <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> matrix2.cuda().<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">float</span>() <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># tensor改到GPU的浮点型</span></span>
+<span id="cb9-3"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(matrix2.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">type</span>())</span></code></pre></div></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>torch.LongTensor
+torch.cuda.FloatTensor</code></pre>
+</div>
+</div>
+</section>
+<section id="张量的运算" class="level2">
+<h2 class="anchored" data-anchor-id="张量的运算">张量的运算</h2>
+<ol type="1">
+<li>逐元素运算</li>
+</ol>
+<div id="73db4849" class="cell" data-execution_count="6">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> torch.nn.functional <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">as</span> F</span>
+<span id="cb11-2"></span>
+<span id="cb11-3"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(matrix <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> one_matrix)</span>
+<span id="cb11-4"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(torch.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">pow</span>(custom_matrix, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>))</span>
+<span id="cb11-5"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(F.silu(randn_matrix))</span>
+<span id="cb11-6"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(torch.std(randn_matrix))</span></code></pre></div></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>tensor([[[-1.,  0.,  1.,  2.],
+         [ 3.,  4.,  5.,  6.],
+         [ 7.,  8.,  9., 10.]],
+
+        [[11., 12., 13., 14.],
+         [15., 16., 17., 18.],
+         [19., 20., 21., 22.]]])
+tensor([[16,  9,  4,  1],
+        [64, 49, 36, 25]])
+tensor([[ 1.0401,  0.2628,  0.2045, -0.1090],
+        [-0.2689, -0.1895,  0.1149, -0.2421]])
+tensor(0.7537)</code></pre>
+</div>
+</div>
+<p>对于任意具有相同形状的张量，常见的标准算术运算符（+、-、*、/和**）都可以被重载为按元素运算。另外还有许多逐元素运算函数：<code>torch.sqrt()</code>、<code>torch.abs()</code>、<code>torch.ceil()</code>、<code>torch.exp()</code>等等<br> <code>torch.std()</code>、<code>torch.mean()</code>、<code>torch.max()</code>等统计函数生成一个标量</p>
+<ol start="2" type="1">
+<li>向量内积与矩阵乘法</li>
+</ol>
+<div id="aaba8995" class="cell" data-execution_count="7">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1">x <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> torch.tensor([<span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1.</span>, <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2.</span>, <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4.</span>, <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">8.</span>])   <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># float32</span></span>
+<span id="cb13-2"></span>
+<span id="cb13-3"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(torch.matmul((matrix <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> one_matrix), x)) <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># matrix是整形直接与x相乘将报错，(matrix - one_matrix)可以自动转化为浮点型 </span></span>
+<span id="cb13-4">(matrix <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> one_matrix) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">@</span> x</span></code></pre></div></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>tensor([[ 19.,  79., 139.],
+        [199., 259., 319.]])</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="7">
+<pre><code>tensor([[ 19.,  79., 139.],
+        [199., 259., 319.]])</code></pre>
+</div>
+</div>
+<p><code>torch.matmul()</code>/<code>@</code>是通用矩阵乘法函数，根据输入的两个张量的维度自动选择<code>torch.dot()</code>（内积，必须两个一维向量）、<code>torch.mm()</code>（二维矩阵乘法）、<code>torch.bmm()</code>（三维矩阵乘法）。注意两个张量的元素类型dtype必须一致。<br> 另有<code>torch.trace()</code>（矩阵的迹）、<code>torch.inverse()</code>（求逆矩阵）、<code>torch.svd()</code>奇异值分解等矩阵方法</p>
+<ol start="3" type="1">
+<li>广播机制</li>
+</ol>
+<div id="7eb7f00f" class="cell" data-execution_count="8">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1">z <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> torch.tensor([[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>], [<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3</span>], [<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">5</span>]])</span>
+<span id="cb16-2"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(x<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span>z)</span></code></pre></div></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>tensor([[ 2.,  3.,  5.,  9.],
+        [ 4.,  5.,  7., 11.],
+        [ 6.,  7.,  9., 13.]])</code></pre>
+</div>
+</div>
+<p>两个张量要么某维度相等，要么两个张量都有一个维度为1，从最右边维度对齐，复制扩展原元素。<code>x.shape</code>为(1, 4)，则广播后先有<code>z.shape=(3, 4)</code>,<code>z(0, :)=[1, 1, 1, 1]</code>,<code>z(1, :)=[3, 3, 3, 3]</code>，然后<code>x.shape=(3, 4)</code>,<code>x(1, :)=[1., 2., 4., 8.]</code>，最终逐元素相加。<br> <code>torch.matmul()</code>/<code>@</code>运算的两个张量可以最后两维满足矩阵乘法规则，其余维度不同按广播规则处理。</p>
+<ol start="4" type="1">
+<li>自动微分</li>
+</ol>
+<div id="f1dbe44a" class="cell" data-execution_count="9">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1">var <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> torch.arange(<span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4.0</span>, requires_grad<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">True</span>) <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># variable封装可以弃用了，现在添加requires_grad更方便</span></span>
+<span id="cb18-2">func <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>torch.matmul(var, var)</span>
+<span id="cb18-3">func.backward() <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">#对输出使用backward</span></span>
+<span id="cb18-4"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(var.grad) <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 2x^2求导4x</span></span></code></pre></div></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>tensor([ 0.,  4.,  8., 12.])</code></pre>
+</div>
+</div>
+
+
+</section>
+</section>
+
+ ]]></description>
+  <category>目标检测</category>
+  <guid>https://journeybegin.github.io/posts/detection/02-tensor.html</guid>
+  <pubDate>Sun, 06 Apr 2025 16:00:00 GMT</pubDate>
+</item>
+<item>
+  <title>基础知识</title>
+  <dc:creator>journeyb </dc:creator>
+  <link>https://journeybegin.github.io/posts/detection/01-intro.html</link>
+  <description><![CDATA[ 
+
+
+
+
+
+<p>人工智能，机器学习，深度学习的关系：</p>
+<div id="fig-AI_deeplearning" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-AI_deeplearning-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="https://journeybegin.github.io/posts/detection/images/image.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-AI_deeplearning-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: 人工智能概念关系图
+</figcaption>
+</figure>
+</div>
+<p>人工智能的核心是机器学习，机器学习的本质是算法。机器学习就是把无序的数据转换为有用的信息。英文定义：A computer program is said to learn from experience E with respect to some class of tasks T and performance measure P, if its performance at tasks in T, as measured by P, improves with experience E.</p>
+<section id="术语概念" class="level1">
+<h1>术语，概念</h1>
+<p>如果我们工作一段时候后，打算去找中介买房。中介会询问你对房子的需求，例如：大小、布局、朝向、地理位置。而这四点在机器学习中称之为<strong>特征feature</strong>。<br> 之后你说出了你需求的房子具体数据——大小：100m<sup>2</sup>、布局：三室一厅一卫、朝向：朝南、地理位置：上海市徐汇区，然后中介会去他们的搜索系统中找到这些特征输入对应的值，之后该系统会列出与你想要的房子相似的房源，并打印一份带有价格的表格给你。</p>
+<div id="tbl-houseprice" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-houseprice-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;1: 房子特征与房价
+</figcaption>
+<div aria-describedby="tbl-houseprice-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: center;">大小</th>
+<th style="text-align: center;">布局</th>
+<th style="text-align: center;">朝向</th>
+<th style="text-align: center;">地理位置</th>
+<th style="text-align: center;">价格</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">100m<sup>2</sup></td>
+<td style="text-align: center;">三室一厅一卫</td>
+<td style="text-align: center;">朝北</td>
+<td style="text-align: center;">上海市徐汇区</td>
+<td style="text-align: center;">500w</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">105m<sup>2</sup></td>
+<td style="text-align: center;">三室两厅一卫</td>
+<td style="text-align: center;">朝南</td>
+<td style="text-align: center;">上海市闵行区</td>
+<td style="text-align: center;">502w</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">100m<sup>2</sup></td>
+<td style="text-align: center;">三室一厅一卫</td>
+<td style="text-align: center;">朝南</td>
+<td style="text-align: center;">上海市黄浦区</td>
+<td style="text-align: center;">505w</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">……</td>
+<td style="text-align: center;">……</td>
+<td style="text-align: center;">……</td>
+<td style="text-align: center;">……</td>
+<td style="text-align: center;">……</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>Table&nbsp;1 中的每一行都是有具体特征的房子，在机器学习中就是一个个具有相关特征的<strong>样本sample</strong>。如果我们搜集更多的数据，并对这些数据进行清洗，将所有相关数据整理成互斥的三部分，也就是内容都不重合的三部分：</p>
+<ul>
+<li><strong>训练集train set：</strong>训练集用于训练机器学习算法的数据样本集合<br></li>
+<li><strong>验证集validation set：</strong>验证集用来做模型选择（model selection），即做模型的最终优化及确定的数据集。因为训练时还有<strong>超参数</strong>，如训练轮数，50轮与100轮训练出的模型很可能不一样，相当于模拟考试，可以一次一次调整。<br></li>
+<li><strong>测试集test set：</strong>测试集用于最终模型的性能，相当于只有一次的高考。测试集得到模型性能才是与其他论文的模型性能比较的依据。<br></li>
+</ul>
+<p>包含这三部分的文件就是<strong>数据集dataset</strong>，现在很多领域都有别人制作的公开的数据集，可以去下载。Table&nbsp;1 就可以是一个包含多个<strong>训练样本training sample</strong>的训练集，每个训练样本中包含4种<strong>特征</strong>、一个<strong>标记label</strong>：本例中标记是房价，是机器学习算法的预测结果。</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>特征和标记没有明确的划分，随问题不同，A问题的特征可能是B问题的标记，B问题的标记可能是A问题的特征。</p>
+</div>
+</div>
+<p>机器学习的目标是使学习得到的模型能很好地适用于“新样本”，适用于“新样本”的能力称为“<strong>泛化</strong>”能力。</p>
+<p><strong>深度学习（deep learning）：</strong>通过组合低层属性特征形成更加抽象的高层属性特征。如学英语的时候，“Nick handsome”这12个英文单词是低层属性特征，而“Nick handsome”的语义则是抽象的高层属性特征。深度学习的概念源于人工神经网络的研究，它属于机器学习中的某一个方法，其中深度学习中的“深度”是指神经网络的层数。<br> <strong>前向传播</strong>：计算出输出值的过程。<br> <strong>反向传播</strong>：通过计算输出层结果与真实值之间的偏差来进行逐层调节参数。例如:对于单层感知机 <img src="https://latex.codecogs.com/png.latex?y(x)=wx+b">，均方误差函数为 <img src="https://latex.codecogs.com/png.latex?J(w)=min%7C%7Cy'-(wx+b)%7C%7C"> 算出均方误差函数的梯度 <img src="https://latex.codecogs.com/png.latex?%5Cnabla_wJ(w)">，则权重更新 <img src="https://latex.codecogs.com/png.latex?w'=w-%5Ceta%5Cnabla_wJ(w)">，其中 <img src="https://latex.codecogs.com/png.latex?%5Ceta"> 为学习率。（拟合函数不一定是线性的，所以是非线性规划的无约束问题）<br></p>
+</section>
+<section id="机器学习分类" class="level1">
+<h1>机器学习分类</h1>
+<p>机器学习依据数据集数据格式的不同，可以划分成监督学习和无监督学习；依据算法模式的不同可以划分为监督学习、无监督学习、半监督学习和强化学习。</p>
+<p><strong>监督学习（supervised learning）</strong>：输入已知信息的样本得到一个模型，去预测未来新数据。监督学习分为<strong>回归问题</strong>与<strong>分类问题</strong>。如果模型的输出为连续值，如股票价格[2.2,2.4,2.6,3…]类型的数据称为连续值，则该监督学习问题称作回归问题。如果模型的输出为离散值，如[阿猫,阿狗,…]或{0,1}（输出不是0就是1），则该监督学习问题称作分类问题。</p>
+<p><strong>无监督学习：（unsupervised learning）</strong>：通过输入一组未知标记的样本，可以通过聚类（clustering）的方法，将数据分成多个簇（cluster）。无监督学习的流程：输入一组未知类别的样本，输出分成多个簇的一组样本。</p>
+<p><strong>半监督学习（semi-supervised learning）</strong>：监督学习与无监督学习相结合的一种学习方法。监督学习和无监督学习的区别主要在于数据集中的数据是否具有标记，当某个问题中的数据集中的数据具有标记时，我们称之为监督学习；反之，我们称之为无监督学习。目前，由于无监督学习算法的不稳定性，它一般作为中间算法，工业上使用较多的是监督学习算法。但是目前工业上累积较多的是不带标记的数据，因此无监督学习在未来将是一个技术突破的重点目标。为了处理这批不带标记的数据，也有科学家提出了半监督学习，它可以简单的理解为监督学习和无监督学习的综合运用，即使用带有标记的数据也使用不带有标记的数据。</p>
+<p><strong>强化学习（reinforcement learning）</strong>：学习系统从环境到行为映射的学习，目标是使智能体获得最大的奖励，即强化信号最大。强化学习类似于无监督学习，但是又不同于无监督学习，强化学习针对的是无标记的数据，但是在强化学习算法对无标记的数据进行处理的同时会给出一个特定的目标，如果算法的处理结果偏离目标，则会给出惩罚；反之，给出奖励，而该算法的目标就是为了获得最大奖励。强化学习一般用于无人驾驶。</p>
+<div id="fig-reinforlearning" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-reinforlearning-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="https://journeybegin.github.io/posts/detection/images/image1.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-reinforlearning-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2: 强化学习
+</figcaption>
+</figure>
+</div>
+
+
+</section>
+
+ ]]></description>
+  <category>目标检测</category>
+  <guid>https://journeybegin.github.io/posts/detection/01-intro.html</guid>
+  <pubDate>Tue, 01 Apr 2025 16:00:00 GMT</pubDate>
+</item>
+</channel>
+</rss>
